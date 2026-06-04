@@ -9,6 +9,10 @@ from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import hstack
 import ast
+import plotly.express as px
+import numpy as np
+import plotly.express as px
+import numpy as np
 
 TMDB_API_KEY = "db1c1e421c66aba5fe3ea45a2851e3fa"
 
@@ -462,39 +466,35 @@ def afficher_detail(film):
 
 # ===== AFFICHER GRILLE =====
 def afficher_grille(films_df, key_prefix):
-    cols = st.columns(5)
-    for idx, (_, film) in enumerate(films_df.iterrows()):
-        with cols[idx % 5]:
-            poster_url = get_poster_url(film.get('poster_path', ''))
-            titre = film.get('title_fr', film.get('original_title_imdb', 'Titre inconnu'))
-            annee = int(film.get('year', 0)) if pd.notna(film.get('year')) else '?'
-            note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
-            genre = film.get('genres_imdb', '') if pd.notna(film.get('genres_imdb')) else ''
-
-            st.markdown('<div class="card-wrapper">', unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="film-card">
-                <img src="{poster_url}" alt="{titre}">
-                <div class="film-info">
-                    <p class="film-title">{titre}</p>
-                    <p class="film-meta">{annee} &nbsp;|&nbsp; {genre}</p>
-                    <p class="film-rating">⭐ {note}/10</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            if st.button("▶", key=f"{key_prefix}_{idx}"):
-                st.session_state['film_selectionne'] = film.to_dict()
-                st.rerun()
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    injecter_js()
+    # On utilise 4 colonnes pour une meilleure lisibilité sur écran large
+    cols = st.columns(4)
     
+    for idx, (_, film) in enumerate(films_df.iterrows()):
+        with cols[idx % 4]:
+            # On utilise le conteneur natif avec hauteur fixe pour harmoniser tous les blocs
+            with st.container(border=True, height=500):
+                poster_url = get_poster_url(film.get('poster_path', ''))
+                titre = film.get('title_fr', film.get('original_title_imdb', 'Titre inconnu'))
+                annee = int(film.get('year', 0)) if pd.notna(film.get('year')) else '?'
+                note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
+                
+                # Image
+                st.image(poster_url, use_container_width=True)
+                
+                # Titre tronqué si trop long pour éviter le débordement
+                titre_court = titre if len(titre) < 25 else titre[:22] + "..."
+                st.markdown(f"**{titre_court}**")
+                
+                # Infos
+                st.write(f"Note : {note}/10")
+                
+                # Bouton "Voir plus" (plus parlant que la flèche)
+                if st.button("Voir plus", key=f"{key_prefix}_{idx}"):
+                    st.session_state['film_selectionne'] = film.to_dict()
+                    st.rerun()
+
 # ===== PAGE ADMIN =====
 def afficher_admin():
-    import plotly.express as px
-
     st.markdown("<h2>🔐 Tableau de bord Admin</h2>", unsafe_allow_html=True)
 
     if st.button("🚪 Déconnexion"):
@@ -503,197 +503,88 @@ def afficher_admin():
 
     st.divider()
 
-    st.markdown("<h3>📊 KPIs du catalogue</h3>", unsafe_allow_html=True)
-
+    # 1. SECTION KPIs (Dashboards)
+    st.markdown("<h3>📊 Vue d'ensemble</h3>", unsafe_allow_html=True)
+    
     col1, col2, col3, col4 = st.columns(4)
+    
+    # Calculs
+    total_films = len(df)
+    note_moy = round(df['imdb_rating'].mean(), 2) if 'imdb_rating' in df.columns else 0
+    nb_genres = df['main_genre'].nunique() if 'main_genre' in df.columns else 0
+    annee_min = int(df['year'].min()) if 'year' in df.columns else 0
+    annee_max = int(df['year'].max()) if 'year' in df.columns else 0
+    
     with col1:
-        st.markdown(f'<div class="kpi-card"><div class="kpi-value">{len(df):,}</div><div class="kpi-label">Films au catalogue</div></div>', unsafe_allow_html=True)
+        st.metric("Nombre de films", f"{total_films:,}")
     with col2:
-        note_moy = round(df['imdb_rating'].mean(), 2)
-        st.markdown(f'<div class="kpi-card"><div class="kpi-value">⭐ {note_moy}</div><div class="kpi-label">Note moyenne</div></div>', unsafe_allow_html=True)
+        st.metric("Note moyenne", f"⭐ {note_moy}")
     with col3:
-        nb_genres = df['main_genre'].nunique()
-        st.markdown(f'<div class="kpi-card"><div class="kpi-value">{nb_genres}</div><div class="kpi-label">Genres différents</div></div>', unsafe_allow_html=True)
+        st.metric("Genres", nb_genres)
     with col4:
-        annee_min = int(df['year'].min())
-        annee_max = int(df['year'].max())
-        st.markdown(f'<div class="kpi-card"><div class="kpi-value">{annee_min}-{annee_max}</div><div class="kpi-label">Période couverte</div></div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<h3>📈 Analyses interactives</h3>", unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        genres_count = df['main_genre'].value_counts().reset_index()
-        genres_count.columns = ['Genre', 'Nombre']
-        fig = px.bar(genres_count, x='Genre', y='Nombre', title='Distribution des genres', color='Nombre', color_continuous_scale='RdPu')
-        fig.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7')
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        notes_genre = df.groupby('main_genre')['imdb_rating'].mean().reset_index()
-        notes_genre.columns = ['Genre', 'Note moyenne']
-        fig2 = px.bar(notes_genre.sort_values('Note moyenne', ascending=False), x='Genre', y='Note moyenne', title='Note moyenne par genre', color='Note moyenne', color_continuous_scale='RdPu')
-        fig2.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7')
-        st.plotly_chart(fig2, use_container_width=True)
-
-    col3, col4 = st.columns(2)
-    with col3:
-        df['decennie'] = (df['year'] // 10 * 10).astype(str) + 's'
-        decennie_count = df['decennie'].value_counts().sort_index().reset_index()
-        decennie_count.columns = ['Décennie', 'Nombre']
-        fig3 = px.line(decennie_count, x='Décennie', y='Nombre', title='Films par décennie', markers=True)
-        fig3.update_traces(line_color='#c9ada7', marker_color='#c9ada7')
-        fig3.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7')
-        st.plotly_chart(fig3, use_container_width=True)
-
-    with col4:
-        top_pop = df.nlargest(10, 'tmdb_popularity')[['title_fr', 'tmdb_popularity']]
-        fig4 = px.bar(top_pop, x='tmdb_popularity', y='title_fr', orientation='h', title='Top 10 films les plus populaires', color='tmdb_popularity', color_continuous_scale='RdPu')
-        fig4.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7', yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig4, use_container_width=True)
+        st.metric("Période", f"{annee_min}-{annee_max}")
 
     st.divider()
-    st.markdown("<h3>💬 Analyse des avis par film</h3>", unsafe_allow_html=True)
-    if len(summary_df) > 0:
-        df_admin = summary_df.copy()
-        df_admin['% positifs'] = (df_admin['nb_positives'] / df_admin['nb_reviews'] * 100).round(1)
-        df_admin['% négatifs'] = (df_admin['nb_negatives'] / df_admin['nb_reviews'] * 100).round(1)
 
-        filtre_avis = st.selectbox("Filtrer par sentiment :", ["Tous", "Plus positifs", "Plus négatifs"])
+    # Fonction utilitaire de parsing
+    def parse_list_safe(x):
+        if x is None or (isinstance(x, float) and np.isnan(x)):
+            return []
+        if isinstance(x, (list, tuple, set)):
+            return [str(i).strip() for i in x if str(i).strip()]
+        s = str(x).replace(" / ", ",").replace(" | ", ",").replace(";", ",")
+        return [p.strip() for p in s.split(",") if p.strip()]
 
-        if filtre_avis == "Plus positifs":
-            df_admin = df_admin.sort_values('% positifs', ascending=False)
-            y_col = ['% positifs']
-            colors = {'% positifs': '#a8d5a2'}
-        elif filtre_avis == "Plus négatifs":
-            df_admin = df_admin.sort_values('% négatifs', ascending=False)
-            y_col = ['% négatifs']
-            colors = {'% négatifs': '#d5a2a2'}
-        else:
-            df_admin = df_admin.sort_values('% négatifs', ascending=False)
-            y_col = ['% positifs', '% négatifs']
-            colors = {'% positifs': '#a8d5a2', '% négatifs': '#d5a2a2'}
+    # Préparation des données
+    df["_actors"]    = df["actors_names"].apply(parse_list_safe)
+    df["_directors"] = df["directors_names"].apply(parse_list_safe)
+    df["_writers"]   = df["writers_names"].apply(parse_list_safe)
+    df["_composers"] = df["composers_names"].apply(parse_list_safe)
 
-        fig_avis = px.bar(
-            df_admin, x='title', y=y_col,
-            title='Ratio avis positifs / négatifs par film',
-            barmode='group',
-            color_discrete_map=colors
+    # ---- GRAPHIQUE 1 : TOP N ----
+    st.markdown("<h3>🎬 Top N — Acteurs / Réalisateurs / etc.</h3>", unsafe_allow_html=True)
+
+    col_choice = st.selectbox("Famille :", ["Acteurs", "Réalisateurs", "Scénaristes", "Compositeurs"], key="topn_famille")
+    col_map = {"Acteurs": "_actors", "Réalisateurs": "_directors", "Scénaristes": "_writers", "Compositeurs": "_composers"}
+    top_n = st.slider("Top (Qté) :", min_value=5, max_value=50, value=10, step=5, key="topn_slider")
+
+    col_sel = col_map[col_choice]
+    exploded = df.explode(col_sel)
+    vc = exploded[col_sel].dropna().value_counts().head(top_n).reset_index()
+    vc.columns = ["Label", "Count"]
+
+    if not vc.empty:
+        fig_topn = px.bar(
+            vc.sort_values("Count"),
+            x="Count", y="Label",
+            orientation="h",
+            color="Count",
+            color_continuous_scale=px.colors.sequential.Viridis,
+            title=f"{col_choice} — Top {top_n}"
         )
-        fig_avis.update_layout(
-            paper_bgcolor='#22223b', plot_bgcolor='#22223b',
-            font_color='#f2e9e4', title_font_color='#c9ada7',
-            xaxis_tickangle=-45
-        )
-        st.plotly_chart(fig_avis, use_container_width=True)
-
-        st.markdown("<h4>📋 Détail par film</h4>", unsafe_allow_html=True)
-        st.dataframe(
-            df_admin[['title', 'nb_reviews', '% positifs', '% négatifs', 'score_moyen']].rename(columns={'title': 'Film'}),
-            use_container_width=True, hide_index=True
-        )
-
-    # KPI - EVOLUTION DURÉE DES FILMS PAR DÉCENNIE
-    st.markdown("<h3>📊 Évolution durée par décennie</h3>", unsafe_allow_html=True)
-    movies_tmp = df.copy()
-    movies_tmp["genres_split"] = movies_tmp["genres_imdb"].str.split(",")
-    movies_tmp = movies_tmp.explode("genres_split")
-    movies_tmp["genres_split"] = movies_tmp["genres_split"].str.strip()
-
-    tous_genres = sorted(movies_tmp["genres_split"].dropna().unique().tolist())
-    top_6 = movies_tmp["genres_split"].value_counts().head(6).index.tolist()
-
-    genres_choisis = st.multiselect(
-        "Choisissez les genres à afficher :",
-        options=tous_genres,
-        default=top_6
-    )
-
-    df_kpi = (movies_tmp[movies_tmp["genres_split"].isin(genres_choisis)]
-        .groupby(["decade", "genres_split"])["runtime_imdb"]
-        .mean()
-        .reset_index())
-
-    fig_duree = px.line(
-        df_kpi.sort_values("decade"),
-        x="decade",
-        y="runtime_imdb",
-        color="genres_split",
-        facet_col="genres_split",
-        facet_col_wrap=3,
-        markers=True,
-        title="Durée moyenne par décennie pour les principaux genres",
-        labels={"decade": "Décennie", "runtime_imdb": "Durée (min)"}
-    )
-    fig_duree.update_xaxes(showgrid=True)
-    fig_duree.update_yaxes(showgrid=True)
-    fig_duree.update_layout(
-        height=700,
-        title_font_size=18,
-        showlegend=False,
-        paper_bgcolor='#22223b',
-        plot_bgcolor='#22223b',
-        font_color='#f2e9e4',
-        title_font_color='#c9ada7'
-    )
-    fig_duree.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
-    st.plotly_chart(fig_duree, use_container_width=True)
+        fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550)
+        st.plotly_chart(fig_topn, use_container_width=True)
 
     st.divider()
-    st.markdown("<h3>🖼️ Graphiques de l'analyse IMDb</h3>", unsafe_allow_html=True)
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    graph_folder = os.path.join(BASE_DIR, '..', 'output', 'graphiques')
 
-    graphiques = [
-        ('01_top_acteurs.png', 'Top 10 Acteurs'),
-        ('02_top_realisateurs.png', 'Top 10 Réalisateurs'),
-        ('03_top_compositeurs.png', 'Top 10 Compositeurs'),
-        ('04_top_scenaristes.png', 'Top 10 Scénaristes'),
-        ('05_top_regions.png', 'Top 10 Régions'),
-        ('06_top_genres.png', 'Top 10 Genres'),
-        ('07_timeline_annees.png', 'Timeline Années'),
-        ('08_distribution_duree.png', 'Distribution Durée'),
-        ('09_distribution_notes.png', 'Distribution Notes'),
-        ('10_distribution_votes.png', 'Distribution Votes'),
-        ('11_top_production_companies.png', 'Top Sociétés Production'),
-        ('12_top_production_countries.png', 'Top Pays Production'),
-    ]
+    # ---- GRAPHIQUE 2 : HISTOGRAMME ----
+    st.markdown("<h3>📊 Distribution — Durée / Notes</h3>", unsafe_allow_html=True)
+    df["runtime_imdb"] = pd.to_numeric(df.get("runtime_imdb"), errors="coerce")
+    df["imdb_rating"]  = pd.to_numeric(df.get("imdb_rating"),  errors="coerce")
 
-    for i in range(0, len(graphiques), 2):
-        col1, col2 = st.columns(2)
-        for j, col in enumerate([col1, col2]):
-            if i + j < len(graphiques):
-                filename, label = graphiques[i + j]
-                path = os.path.join(graph_folder, filename)
-                if os.path.exists(path):
-                    with col:
-                        st.markdown(f"<p style='color:#c9ada7; text-align:center;'>{label}</p>", unsafe_allow_html=True)
-                        st.image(path, use_container_width=True)
+    hist_choice = st.selectbox("Variable :", ["Distribution Durée", "Distribution Notes"], key="hist_var")
+    hist_bins   = st.slider("Nb classes :", min_value=10, max_value=100, value=30, step=5, key="hist_bins")
 
-    st.divider()
-    st.markdown("<h3>📋 Étude de marché Creuse</h3>", unsafe_allow_html=True)
+    hist_col = "runtime_imdb" if hist_choice == "Distribution Durée" else "imdb_rating"
+    clean = df[hist_col].dropna()
 
-    data_creuse = {
-        'Année': [2019, 2020, 2021, 2022, 2023, 2024, 2025],
-        'Creuse (moyenne)': [385, 200, 330, 350, 365, 375, 380],
-        'France': [744, 424, 650, 673, 715, 744, 725]
-    }
-    fig5 = px.line(pd.DataFrame(data_creuse), x='Année', y=['Creuse (moyenne)', 'France'],
-                   title='Films projetés : Creuse vs France', markers=True,
-                   color_discrete_map={'Creuse (moyenne)': '#c9ada7', 'France': '#9a8c98'})
-    fig5.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7')
-    st.plotly_chart(fig5, use_container_width=True)
-
-    data_genres = {
-        'Genre': ['Documentaire', 'Drame', 'Action', 'Comedie', 'Animation', 'Thriller', 'Comedie_dramatique', 'Science-fiction', 'Horreur'],
-        'Total': [475, 439, 364, 346, 274, 211, 211, 188, 161]
-    }
-    fig6 = px.bar(pd.DataFrame(data_genres), x='Total', y='Genre', orientation='h',
-                  title='Genres les plus représentés en France (2019-2023)',
-                  color='Total', color_continuous_scale='RdPu')
-    fig6.update_layout(paper_bgcolor='#22223b', plot_bgcolor='#22223b', font_color='#f2e9e4', title_font_color='#c9ada7', yaxis={'categoryorder': 'total ascending'})
-    st.plotly_chart(fig6, use_container_width=True)
+    fig_hist = px.histogram(
+        clean, x=clean, nbins=hist_bins,
+        color_discrete_sequence=["#3B528B"],
+        title=f"{hist_choice} — {hist_bins} classes"
+    )
+    fig_hist.update_layout(height=500, margin=dict(l=60, r=40, t=60, b=60), bargap=0.05)
+    st.plotly_chart(fig_hist, use_container_width=True)
 
 # ===== BANDEAU NETFLIX =====
 def afficher_bandeau(titre, films_df, key_prefix):
