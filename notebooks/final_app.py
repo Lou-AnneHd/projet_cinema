@@ -172,7 +172,7 @@ hr { border-color: #4a4e69 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ===== CHARGER LES DONNÈES =====
+# ===== CHARGER LES DONNÉES =====
 @st.cache_data
 def load_data():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -187,7 +187,7 @@ def load_reviews():
     summary = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_summary.csv'))
     return reviews, summary
 
-# ===== CHARGER LE MOD├êLE ML =====
+# ===== CHARGER LE ML =====
 @st.cache_data
 def load_ml_model():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -242,7 +242,7 @@ def get_backdrop_url(backdrop_path):
         return f"https://image.tmdb.org/t/p/original{backdrop_path}"
     return None
 
-# ===== RÈCUPÈRER BANDE ANNONCE =====
+# ===== RECUPERE BANDE ANNONCE =====
 @st.cache_data
 def get_trailer(tmdb_id):
     try:
@@ -402,7 +402,7 @@ def afficher_detail(film):
         st.markdown(f"<h2>{titre_fr}</h2>", unsafe_allow_html=True)
         if titre_fr != titre:
             st.markdown(f"<p style='color:#9a8c98; font-style:italic;'>Titre original : {titre}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#9a8c98; font-size:15px;'>­ƒôà {annee} &nbsp;|&nbsp; ⏱ {int(duree) if pd.notna(duree) else '?'} min &nbsp;|&nbsp; 🎭 {genres_complets}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#9a8c98; font-size:15px;'>📅 {annee} &nbsp;|&nbsp; ⏱ {int(duree) if pd.notna(duree) else '?'} min &nbsp;|&nbsp; 🎭 {genres_complets}</p>", unsafe_allow_html=True)
         st.markdown(f"<p style='color:#f2e9e4; font-size:15px; line-height:1.7;'>{overview}</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -492,7 +492,7 @@ def afficher_grille(films_df, key_prefix):
                 # Infos
                 st.write(f"Note : {note}/10")
                 
-                # Bouton "Voir plus" (plus parlant que la fl├¿che)
+                # Bouton "Voir plus" (plus parlant que la flèche)
                 if st.button("Voir plus", key=f"{key_prefix}_{idx}"):
                     st.session_state['film_selectionne'] = film.to_dict()
                     st.rerun()
@@ -513,7 +513,7 @@ def afficher_admin():
     st.divider()
 
     if st.session_state.get('show_archives', False):
-        st.markdown("<h3>📁 Archives — Bilans & Ètudes</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📁 Archives — Bilans & Études</h3>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
         archives_dir = os.path.join(BASE_DIR, '..', 'archives')
@@ -611,7 +611,7 @@ def afficher_admin():
 
     st.divider()
 
-    # ---- GRAPHIQUE 3 : SATISFACTION VS POPULARITÈ ----
+    # ---- GRAPHIQUE 3 : SATISFACTION VS POPULARITÉ----
     st.markdown("<h3>📈 Aide à la décision : Satisfaction vs Popularité</h3>", unsafe_allow_html=True)
     try:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -685,7 +685,7 @@ def afficher_bandeau(titre, films_df, key_prefix):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            if st.button("ÔûÂ", key=f"{key_prefix}_{page}_{col_idx}"):
+            if st.button("▶", key=f"{key_prefix}_{page}_{col_idx}"):
                 st.session_state['film_selectionne'] = film.to_dict()
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
