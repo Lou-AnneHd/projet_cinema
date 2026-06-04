@@ -337,6 +337,10 @@ else:
     if st.sidebar.button("🔐 Accès Admin"):
         st.session_state['show_login'] = True
 
+if page != st.session_state.get('page_actuelle'):
+    st.session_state['film_selectionne'] = None
+    st.session_state['page_actuelle'] = page
+
 # ===== JS CLIC SUR CARTE =====
 def injecter_js():
     components.html("""
@@ -495,26 +499,58 @@ def afficher_grille(films_df, key_prefix):
 
 # ===== PAGE ADMIN =====
 def afficher_admin():
-    st.markdown("<h2>🔐 Tableau de bord Admin</h2>", unsafe_allow_html=True)
-
-    if st.button("🚪 Déconnexion"):
-        st.session_state['admin_connecte'] = False
-        st.rerun()
+    col_titre, col_archives, col_deco = st.columns([6, 2, 2])
+    with col_titre:
+        st.markdown("<h2>🔐 Tableau de bord Admin</h2>", unsafe_allow_html=True)
+    with col_archives:
+        if st.button("📁 Archives"):
+            st.session_state['show_archives'] = not st.session_state.get('show_archives', False)
+    with col_deco:
+        if st.button("🚪 Déconnexion"):
+            st.session_state['admin_connecte'] = False
+            st.rerun()
 
     st.divider()
 
-    # 1. SECTION KPIs (Dashboards)
+    if st.session_state.get('show_archives', False):
+        st.markdown("<h3>📁 Archives — Bilans & Études</h3>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        archives_dir = os.path.join(BASE_DIR, '..', 'archives')
+        os.makedirs(archives_dir, exist_ok=True)
+        uploaded = st.file_uploader("➕ Ajouter une archive", type="pdf", key="upload_archive")
+        if uploaded is not None:
+            with open(os.path.join(archives_dir, uploaded.name), 'wb') as f:
+                f.write(uploaded.getbuffer())
+            st.success(f"✅ '{uploaded.name}' ajouté !")
+            st.rerun()
+        st.markdown("<br>", unsafe_allow_html=True)
+        fichiers = [f for f in os.listdir(archives_dir) if f.endswith('.pdf')]
+        if fichiers:
+            for fichier in fichiers:
+                chemin = os.path.join(archives_dir, fichier)
+                col_dl, col_sup = st.columns([6, 1])
+                with col_dl:
+                    with open(chemin, 'rb') as f:
+                        st.download_button(label=f"📄 {fichier}", data=f, file_name=fichier, mime="application/pdf", key=f"dl_{fichier}")
+                with col_sup:
+                    if st.button("🗑️", key=f"sup_{fichier}"):
+                        os.remove(chemin)
+                        st.rerun()
+        else:
+            st.markdown("<p style='color:#9a8c98; font-style:italic;'>Aucune archive disponible.</p>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # 1. SECTION KPIs
     st.markdown("<h3>📊 Vue d'ensemble</h3>", unsafe_allow_html=True)
-    
     col1, col2, col3, col4 = st.columns(4)
-    
-    # Calculs
     total_films = len(df)
     note_moy = round(df['imdb_rating'].mean(), 2) if 'imdb_rating' in df.columns else 0
     nb_genres = df['main_genre'].nunique() if 'main_genre' in df.columns else 0
     annee_min = int(df['year'].min()) if 'year' in df.columns else 0
     annee_max = int(df['year'].max()) if 'year' in df.columns else 0
-    
     with col1:
         st.metric("Nombre de films", f"{total_films:,}")
     with col2:
@@ -526,7 +562,6 @@ def afficher_admin():
 
     st.divider()
 
-    # Fonction utilitaire de parsing
     def parse_list_safe(x):
         if x is None or (isinstance(x, float) and np.isnan(x)):
             return []
@@ -535,7 +570,6 @@ def afficher_admin():
         s = str(x).replace(" / ", ",").replace(" | ", ",").replace(";", ",")
         return [p.strip() for p in s.split(",") if p.strip()]
 
-    # Préparation des données
     df["_actors"]    = df["actors_names"].apply(parse_list_safe)
     df["_directors"] = df["directors_names"].apply(parse_list_safe)
     df["_writers"]   = df["writers_names"].apply(parse_list_safe)
@@ -543,26 +577,20 @@ def afficher_admin():
 
     # ---- GRAPHIQUE 1 : TOP N ----
     st.markdown("<h3>🎬 Top N — Acteurs / Réalisateurs / etc.</h3>", unsafe_allow_html=True)
-
     col_choice = st.selectbox("Famille :", ["Acteurs", "Réalisateurs", "Scénaristes", "Compositeurs"], key="topn_famille")
     col_map = {"Acteurs": "_actors", "Réalisateurs": "_directors", "Scénaristes": "_writers", "Compositeurs": "_composers"}
     top_n = st.slider("Top (Qté) :", min_value=5, max_value=50, value=10, step=5, key="topn_slider")
-
     col_sel = col_map[col_choice]
     exploded = df.explode(col_sel)
     vc = exploded[col_sel].dropna().value_counts().head(top_n).reset_index()
     vc.columns = ["Label", "Count"]
-
+    vc["Label"] = vc["Label"].astype(str).str.strip("[]'\"")
     if not vc.empty:
-        fig_topn = px.bar(
-            vc.sort_values("Count"),
-            x="Count", y="Label",
-            orientation="h",
-            color="Count",
-            color_continuous_scale=px.colors.sequential.Viridis,
-            title=f"{col_choice} — Top {top_n}"
-        )
-        fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550)
+        fig_topn = px.bar(vc.sort_values("Count"), x="Count", y="Label", orientation="h",
+            color="Count", color_continuous_scale=px.colors.sequential.Viridis,
+            title=f"{col_choice} — Top {top_n}")
+        fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
         st.plotly_chart(fig_topn, use_container_width=True)
 
     st.divider()
@@ -571,20 +599,48 @@ def afficher_admin():
     st.markdown("<h3>📊 Distribution — Durée / Notes</h3>", unsafe_allow_html=True)
     df["runtime_imdb"] = pd.to_numeric(df.get("runtime_imdb"), errors="coerce")
     df["imdb_rating"]  = pd.to_numeric(df.get("imdb_rating"),  errors="coerce")
-
     hist_choice = st.selectbox("Variable :", ["Distribution Durée", "Distribution Notes"], key="hist_var")
-    hist_bins   = st.slider("Nb classes :", min_value=10, max_value=100, value=30, step=5, key="hist_bins")
-
+    hist_bins = st.slider("Nb classes :", min_value=10, max_value=100, value=30, step=5, key="hist_bins")
     hist_col = "runtime_imdb" if hist_choice == "Distribution Durée" else "imdb_rating"
     clean = df[hist_col].dropna()
-
-    fig_hist = px.histogram(
-        clean, x=clean, nbins=hist_bins,
-        color_discrete_sequence=["#3B528B"],
-        title=f"{hist_choice} — {hist_bins} classes"
-    )
-    fig_hist.update_layout(height=500, margin=dict(l=60, r=40, t=60, b=60), bargap=0.05)
+    fig_hist = px.histogram(clean, x=clean, nbins=hist_bins,
+        color_discrete_sequence=["#3B528B"], title=f"{hist_choice} — {hist_bins} classes")
+    fig_hist.update_layout(height=500, margin=dict(l=60, r=40, t=60, b=60), bargap=0.05,
+        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
     st.plotly_chart(fig_hist, use_container_width=True)
+
+    st.divider()
+
+    # ---- GRAPHIQUE 3 : SATISFACTION VS POPULARITÉ ----
+    st.markdown("<h3>📈 Aide à la décision : Satisfaction vs Popularité</h3>", unsafe_allow_html=True)
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        df_summary = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_summary.csv'))
+        col_f1, col_f2 = st.columns([2, 2])
+        with col_f1:
+            min_avis = st.slider("Nombre minimum d'avis :", 0, int(df_summary['nb_reviews'].max()), 5, key="min_avis_slider")
+        with col_f2:
+            filtre_type = st.radio("Afficher :", ["Positifs", "Négatifs", "Les deux"], horizontal=True, key="filtre_avis")
+        df_filtre_avis = df_summary[df_summary['nb_reviews'] >= min_avis].copy()
+        if filtre_type == "Positifs":
+            df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
+            fig_avis = px.bar(df_plot, x="nb_positives", y="title", orientation="h",
+                title="Top films — Avis positifs", color_discrete_sequence=["#c9ada7"])
+        elif filtre_type == "Négatifs":
+            df_plot = df_filtre_avis.sort_values("nb_negatives", ascending=True).tail(20)
+            fig_avis = px.bar(df_plot, x="nb_negatives", y="title", orientation="h",
+                title="Top films — Avis négatifs", color_discrete_sequence=["#9a8c98"])
+        else:
+            df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
+            fig_avis = px.bar(df_plot, x=["nb_positives", "nb_negatives"], y="title",
+                orientation="h", barmode="group", title="Top films — Avis positifs vs négatifs",
+                color_discrete_sequence=["#c9ada7", "#9a8c98"])
+        fig_avis.update_layout(height=550, plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4',
+            xaxis_title="Nombre d'avis", yaxis_title="Film", legend_title="Type d'avis")
+        st.plotly_chart(fig_avis, use_container_width=True)
+    except FileNotFoundError:
+        st.warning("⚠️ Fichier reviews_summary.csv introuvable.")
 
 # ===== BANDEAU NETFLIX =====
 def afficher_bandeau(titre, films_df, key_prefix):
