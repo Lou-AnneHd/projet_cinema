@@ -26,15 +26,15 @@ st.set_page_config(
 # ===== STYLE CSS =====
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap');
 
 .stApp {
     background-color: #22223b;
     color: #f2e9e4;
-    font-family: 'Lato', sans-serif;
+    font-family: 'Poppins', sans-serif;
 }
 h1 {
-    font-family: 'Playfair Display', serif !important;
+    font-family: 'Poppins', serif !important;
     color: #c9ada7 !important;
     text-align: center;
     font-size: 3em !important;
@@ -42,7 +42,7 @@ h1 {
     padding: 20px 0;
 }
 h2, h3 {
-    font-family: 'Playfair Display', serif !important;
+    font-family: 'Poppins', sans-serif !important;
     color: #c9ada7 !important;
 }
 .stTextInput input {
@@ -525,7 +525,7 @@ def afficher_grille(films_df, key_prefix):
                     st.markdown(f"""
                     <div style="height: 110px; margin-top: 10px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: space-between;">
                         <div>
-                            <div style="font-family: 'Lato', sans-serif; color: #f2e9e4; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
+                            <div style="font-family: 'Poppins', sans-serif; color: #f2e9e4; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
                                 {titre}
                             </div>
                             <div style="color: #9a8c98; font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -545,16 +545,12 @@ def afficher_grille(films_df, key_prefix):
 
 # ===== PAGE ADMIN =====
 def afficher_admin():
-    col_titre, col_archives, col_deco = st.columns([6, 2, 2])
+    col_titre, col_archives = st.columns([8, 2])
     with col_titre:
         st.markdown("<h2>🔐 Tableau de bord Admin</h2>", unsafe_allow_html=True)
     with col_archives:
         if st.button("📁 Archives"):
             st.session_state['show_archives'] = not st.session_state.get('show_archives', False)
-    with col_deco:
-        if st.button("🚪 Déconnexion"):
-            st.session_state['admin_connecte'] = False
-            st.rerun()
 
     st.divider()
 
@@ -578,12 +574,9 @@ def afficher_admin():
                 chemin = os.path.join(archives_dir, fichier)
                 with open(chemin, 'rb') as f:
                     pdf_data = f.read()
-                b64 = base64.b64encode(pdf_data).decode('utf-8')
-                st.markdown(f"**📄 {fichier}**")
-                st.markdown(f'<iframe src="data:application/pdf;base64,{b64}" width="100%" height="600px"></iframe>', unsafe_allow_html=True)
                 col_dl, col_sup = st.columns([6, 1])
                 with col_dl:
-                    st.download_button(label=f"⬇️ Télécharger", data=pdf_data, file_name=fichier, mime="application/pdf", key=f"dl_{fichier}")
+                    st.download_button(label=f"📄 {fichier}", data=pdf_data, file_name=fichier, mime="application/pdf", key=f"dl_{fichier}")
                 with col_sup:
                     if st.button("🗑", key=f"sup_{fichier}"):
                         os.remove(chemin)
@@ -627,7 +620,7 @@ def afficher_admin():
         pass
 
     # ---- 2. TOP GENRES ----
-    st.markdown("<h3>🎬 Top genres les plus représentés</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>🎬 Analyse des genres les plus représentés</h3>", unsafe_allow_html=True)
     if movies_genres is not None:
         try:
             kpi_genres = movies_genres["genres_final"].value_counts(normalize=True).mul(100).rename_axis("genres_final").reset_index(name="Pourcentage")
@@ -635,7 +628,7 @@ def afficher_admin():
             top_n_genres = st.slider("Top N genres :", min_value=3, max_value=min(30, len(kpi_genres)), value=10, step=1, key="kpi2_topn")
             df_kpi2 = kpi_genres.head(top_n_genres).sort_values("Pourcentage", ascending=True)
             fig_kpi2 = px.bar(df_kpi2, x="Pourcentage", y="genres_final", orientation="h",
-                color="Pourcentage", color_continuous_scale=px.colors.sequential.Viridis,
+                color="Pourcentage", color_continuous_scale='PiYG',
                 labels={"genres_final": "Genre", "Pourcentage": "Pourcentage (%)"},
                 title=f"Top {top_n_genres} des genres les plus représentés", height=520)
             fig_kpi2.update_layout(margin=dict(l=160, r=40, t=70, b=40),
@@ -649,7 +642,7 @@ def afficher_admin():
     st.divider()
 
     # ---- 3. REPARTITION GENRES PAR DECENNIE ----
-    st.markdown("<h3>📊 Répartition des films par genre au cours du temps</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>📊 Genres : évolution et répartition</h3>", unsafe_allow_html=True)
     if movies_genres is not None:
         try:
             genre_decennie = movies_genres.groupby(["decennie", "genres_final"]).size().reset_index(name="nb_films")
@@ -659,9 +652,8 @@ def afficher_admin():
             genre_decennie_top = genre_decennie[genre_decennie["genres_final"].isin(top_genres_kpi3)].copy()
             genre_decennie_top["decennie_num"] = pd.to_numeric(genre_decennie_top["decennie"], errors="coerce")
             fig_kpi3 = px.line(genre_decennie_top, x="decennie_num", y="pourcentage", color="genres_final",
-                markers=True, labels={"decennie_num": "Décennie", "pourcentage": "Pourcentage (%)", "genres_final": "Genre"},
-                color_discrete_sequence=px.colors.sequential.Viridis,
-                title="Évolution des genres par décennie", height=600)
+            markers=True, labels={"decennie_num": "Décennie", "pourcentage": "Pourcentage (%)", "genres_final": "Genre"},
+            title="Évolution des genres par décennie", height=600)
             decades = sorted(genre_decennie_top["decennie_num"].dropna().unique())
             fig_kpi3.update_xaxes(rangeslider_visible=True, tickmode="array", tickvals=decades,
                 ticktext=[str(int(d)) for d in decades], showgrid=False)
@@ -688,8 +680,7 @@ def afficher_admin():
                 fig_kpi1 = px.line(df_kpi1, x="decennie_num", y="runtime_final", color="genres_final",
                     facet_col="genres_final", facet_col_wrap=3, markers=True,
                     title=f"Durée moyenne par décennie — {len(selected)} genre(s)",
-                    labels={"decennie_num": "Décennie", "runtime_final": "Durée (min)"},
-                    color_discrete_sequence=px.colors.sequential.Viridis)
+                    labels={"decennie_num": "Décennie", "runtime_final": "Durée (min)"})
                 fig_kpi1.update_layout(height=300 + 220 * ((len(selected) - 1) // 3 + 1),
                     margin=dict(t=90, l=60, r=40, b=60), showlegend=False,
                     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
@@ -714,7 +705,7 @@ def afficher_admin():
     df["_writers"]   = df["writers_names"].apply(parse_list_safe)
     df["_composers"] = df["composers_names"].apply(parse_list_safe)
 
-    st.markdown("<h3>🎬 Top N — Acteurs / Réalisateurs / etc.</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>🎬 Panorama des rôles créatifs — Classement.</h3>", unsafe_allow_html=True)
     col_choice = st.selectbox("Famille :", ["Acteurs", "Réalisateurs", "Scénaristes", "Compositeurs"], key="topn_famille")
     col_map = {"Acteurs": "_actors", "Réalisateurs": "_directors", "Scénaristes": "_writers", "Compositeurs": "_composers"}
     top_n = st.slider("Top (Qté) :", min_value=5, max_value=50, value=10, step=5, key="topn_slider")
@@ -725,7 +716,7 @@ def afficher_admin():
     vc["Label"] = vc["Label"].astype(str).str.strip("[]'\"")
     if not vc.empty:
         fig_topn = px.bar(vc.sort_values("Count"), x="Count", y="Label", orientation="h",
-            color="Count", color_continuous_scale=px.colors.sequential.Viridis,
+            color="Count", color_continuous_scale='PiYG',
             title=f"{col_choice} — Top {top_n}")
         fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
@@ -734,7 +725,7 @@ def afficher_admin():
     st.divider()
 
     # ---- 6. TOP PAYS / SOCIETES ----
-    st.markdown("<h3>🌍 Top Pays / Sociétés de production</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>🌍 Pays & Sociétés de production — Classement</h3>", unsafe_allow_html=True)
     try:
         df_alix = df.copy()
         df_alix["_countries"] = df_alix["production_companies_country"].apply(parse_list_safe)
@@ -750,7 +741,7 @@ def afficher_admin():
         vc_alix = vc_alix[vc_alix["Label"] != "nan"]
         vc_alix = vc_alix.groupby("Label")["Count"].sum().reset_index().sort_values("Count", ascending=True)
         fig_kpi5 = px.bar(vc_alix.sort_values("Count"), x="Count", y="Label", orientation="h",
-            color="Count", color_continuous_scale=px.colors.sequential.Viridis,
+            color="Count", color_continuous_scale='PiYG',
             title=f"{famille_alix} — Top {top_n_alix}")
         fig_kpi5.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
@@ -761,7 +752,7 @@ def afficher_admin():
     st.divider()
 
     # ---- 7. DISTRIBUTION DUREE / NOTES ----
-    st.markdown("<h3>📊 Distribution — Durée / Notes</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>📊 Distribution des films — Durée & Notes</h3>", unsafe_allow_html=True)
     df["runtime_imdb"] = pd.to_numeric(df.get("runtime_imdb"), errors="coerce")
     df["imdb_rating"]  = pd.to_numeric(df.get("imdb_rating"),  errors="coerce")
     hist_choice = st.selectbox("Variable :", ["Distribution Durée", "Distribution Notes"], key="hist_var")
@@ -769,7 +760,7 @@ def afficher_admin():
     hist_col = "runtime_imdb" if hist_choice == "Distribution Durée" else "imdb_rating"
     clean = df[hist_col].dropna()
     fig_hist = px.histogram(clean, x=clean, nbins=hist_bins,
-        color_discrete_sequence=["#3B528B"], title=f"{hist_choice} — {hist_bins} classes")
+        color_discrete_sequence=["#4dac26"], title=f"{hist_choice} — {hist_bins} classes")
     fig_hist.update_layout(height=500, margin=dict(l=60, r=40, t=60, b=60), bargap=0.05,
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
     st.plotly_chart(fig_hist, use_container_width=True)
@@ -777,7 +768,7 @@ def afficher_admin():
     st.divider()
 
     # ---- 8. RENTABILITE ROI ----
-    st.markdown("<h3>💰 Rentabilité par genre (ROI)</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>💰 Genres — Rentabilité (ROI)</h3>", unsafe_allow_html=True)
     if movies_genres is not None:
         try:
             profit = movies_genres.dropna(subset=["budget_tmdb", "revenue_tmdb", "genres_final"]).copy()
@@ -792,7 +783,7 @@ def afficher_admin():
             df_kpi4 = rentabilite_genre.head(top_n_roi) if ordre_roi == "Décroissant" else rentabilite_genre.sort_values("roi", ascending=True).head(top_n_roi)
             df_kpi4 = df_kpi4.sort_values("roi", ascending=True)
             fig_kpi4 = px.bar(df_kpi4, x="roi", y="genres_final", orientation="h",
-                color="roi", color_continuous_scale=px.colors.sequential.Viridis,
+                color="roi", color_continuous_scale='PiYG',
                 labels={"roi": "ROI moyen", "genres_final": "Genre"},
                 title=f"Top {top_n_roi} Genres par ROI moyen", height=520)
             fig_kpi4.update_layout(margin=dict(l=160, r=40, t=70, b=40),
@@ -804,7 +795,7 @@ def afficher_admin():
     st.divider()
 
     # ---- 9. SATISFACTION VS POPULARITE ----
-    st.markdown("<h3>📈 Aide à la décision : Satisfaction vs Popularité</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>📈 Indicateurs décisionnels — Satisfaction & Popularité</h3>", unsafe_allow_html=True)
     try:
         df_summary = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_summary.csv'))
         col_f1, col_f2 = st.columns([2, 2])
@@ -816,16 +807,16 @@ def afficher_admin():
         if filtre_type == "Positifs":
             df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x="nb_positives", y="title", orientation="h",
-                title="Top films — Avis positifs", color_discrete_sequence=["#c9ada7"])
+                title="Top films — Avis positifs", color_discrete_sequence=["#4dac26"])
         elif filtre_type == "Négatifs":
             df_plot = df_filtre_avis.sort_values("nb_negatives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x="nb_negatives", y="title", orientation="h",
-                title="Top films — Avis négatifs", color_discrete_sequence=["#9a8c98"])
+                title="Top films — Avis négatifs", color_discrete_sequence=["#d01c8b"])
         else:
             df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x=["nb_positives", "nb_negatives"], y="title",
                 orientation="h", barmode="group", title="Top films — Avis positifs vs négatifs",
-                color_discrete_sequence=["#c9ada7", "#9a8c98"])
+                color_discrete_sequence=["#4dac26", "#d01c8b"])
         fig_avis.update_layout(height=550, plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4',
             xaxis_title="Nombre d'avis", yaxis_title="Film", legend_title="Type d'avis")
@@ -875,7 +866,7 @@ def afficher_bandeau(titre, films_df, key_prefix):
                 st.markdown(f"""
                 <div style="height: 110px; margin-top: 10px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <div style="font-family: 'Lato', sans-serif; color: #ffffff; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
+                        <div style="font-family: 'Poppins', sans-serif; color: #ffffff; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
                             {titre_film}
                         </div>
                         <div style="color: #9a8c98; font-size: 11px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -889,7 +880,7 @@ def afficher_bandeau(titre, films_df, key_prefix):
                 """, unsafe_allow_html=True)
                 
                 # 3. Le bouton Play (Généré à l'intérieur du container, il ne peut plus s'échapper !)
-                if st.button("▶", key=f"{key_prefix}_{page_b}_{col_idx}"):
+                if st.button("Voir plus", key=f"{key_prefix}_{page_b}_{col_idx}"):
                     st.session_state['film_selectionne'] = film.to_dict()
                     st.rerun()
 
