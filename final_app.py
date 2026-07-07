@@ -13,27 +13,54 @@ import plotly.express as px
 import numpy as np
 import plotly.express as px
 import numpy as np
+from deep_translator import GoogleTranslator
+
+TRAD_GENRES = {
+    "Drama": "Drame",
+    "Comedy": "Comédie",
+    "Action": "Action",
+    "Romance": "Romance",
+    "Thriller": "Thriller",
+    "Horror": "Horreur",
+    "Adventure": "Aventure",
+    "Crime": "Policier",
+    "Mystery": "Mystère",
+    "Sci-Fi": "Science-Fiction",
+    "Biography": "Biographie",
+    "Animation": "Animation",
+    "Fantasy": "Fantastique",
+    "History": "Histoire",
+    "Music": "Musique",
+    "Sport": "Sport",
+    "War": "Guerre",
+    "Family": "Famille",
+    "Documentary": "Documentaire",
+    "Western": "Western"
+}
 
 TMDB_API_KEY = "db1c1e421c66aba5fe3ea45a2851e3fa"
 
 # ===== CONFIGURATION DE LA PAGE =====
 st.set_page_config(
-    page_title="Cin├®ma Creuse",
+    page_title="Cinéma Creuse",
     layout="wide"
 )
 
 # ===== STYLE CSS =====
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap');
 
 .stApp {
-    background-color: #22223b;
+    background-color: #0d0010;
+    background-image: 
+        radial-gradient(ellipse at 50% 0%, rgba(150,100,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.8) 0%, transparent 70%);
     color: #f2e9e4;
-    font-family: 'Lato', sans-serif;
+    font-family: 'Poppins', sans-serif;
 }
 h1 {
-    font-family: 'Playfair Display', serif !important;
+    font-family: 'Poppins', serif !important;
     color: #c9ada7 !important;
     text-align: center;
     font-size: 3em !important;
@@ -41,31 +68,34 @@ h1 {
     padding: 20px 0;
 }
 h2, h3 {
-    font-family: 'Playfair Display', serif !important;
+    font-family: 'Poppins', sans-serif !important;
     color: #c9ada7 !important;
 }
 .stTextInput input {
-    background-color: #4a4e69 !important;
+    background-color: #251b3d !important;
     color: #f2e9e4 !important;
-    border: 1px solid #9a8c98 !important;
+    border: 1px solid #c9a84c !important;
     border-radius: 25px !important;
     padding: 10px 20px !important;
 }
 .stSelectbox > div > div {
-    background-color: #4a4e69 !important;
+    background-color: #251b3d !important;
     color: #f2e9e4 !important;
-    border: 1px solid #9a8c98 !important;
+    border: 1px solid #c9a84c !important;
     border-radius: 10px !important;
 }
 .film-card {
-    background-color: #4a4e69;
+    background-color: #251b3d;
     border-radius: 10px;
     overflow: hidden;
-    border: 1px solid #9a8c98;
+    border: 1px solid #c9a84c;
     margin-bottom: 5px;
     transition: transform 0.3s ease, border-color 0.3s ease;
-    cursor: pointer;
+    cursor: default;
 }
+.film-card button {
+    cursor: pointer !important;
+}          
 .film-card:hover {
     transform: scale(1.05);
     border-color: #c9ada7;
@@ -84,12 +114,13 @@ h2, h3 {
     font-weight: 700;
     margin: 0 0 5px 0;
 }
-.film-meta { color: #9a8c98; font-size: 12px; }
+.film-meta { color: #c9a84c; font-size: 12px; }
 .film-rating { color: #c9ada7; font-size: 13px; font-weight: 700; }
-hr { border-color: #4a4e69 !important; }
+hr { border-color: #251b3d !important; }
 [data-testid="stSidebar"] {
-    background-color: #22223b !important;
-    border-right: 1px solid #4a4e69 !important;
+    background-color: #0d0010 !important;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(150,100,255,0.08) 0%, transparent 60%) !important;
+    border-right: 1px solid rgba(150,100,255,0.15) !important;
 }
 .stButton button {
     background-color: #c9ada7 !important;
@@ -104,7 +135,7 @@ hr { border-color: #4a4e69 !important; }
 }
 .barre-deco {
     height: 3px;
-    background: linear-gradient(to right, #22223b, #4a4e69, #9a8c98, #4a4e69, #22223b);
+    background: linear-gradient(to right, #22223b, #251b3d, #c9a84c, #251b3d, #22223b);
     border-radius: 5px;
     margin: 10px 0 25px 0;
 }
@@ -137,19 +168,19 @@ hr { border-color: #4a4e69 !important; }
     text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
 }
 .avis-box {
-    background-color: #22223b;
-    border: 1px dashed #9a8c98;
+     background-color: #22223b;
+    border: 1px dashed #c9a84c;
     border-radius: 10px;
     padding: 20px;
     text-align: center;
-    color: #9a8c98;
+    color: #c9a84c;
     font-style: italic;
 }
 .kpi-card {
-    background-color: #4a4e69;
+    background-color: #251b3d;
     border-radius: 10px;
     padding: 20px;
-    border: 1px solid #9a8c98;
+    border: 1px solid #c9a84c;
     text-align: center;
     margin-bottom: 10px;
 }
@@ -159,39 +190,39 @@ hr { border-color: #4a4e69 !important; }
     color: #c9ada7;
 }
 .kpi-label {
-    color: #9a8c98;
+    color: #c9a84c;
     font-size: 14px;
 }
 [data-testid="stMetric"] {
-    background-color: #4a4e69;
+    background-color: #251b3d;
     padding: 15px;
     border-radius: 10px;
-    border: 1px solid #9a8c98;
+    border: 1px solid #c9a84c;
 }
 [data-testid="stMetricValue"] { color: #c9ada7 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ===== CHARGER LES DONN├ëES =====
+# ===== CHARGER LES DONNEES =====
 @st.cache_data
 def load_data():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    df = pd.read_csv(os.path.join(BASE_DIR, '..', 'data', 'catalogue_films.csv'))
+    df = pd.read_csv(os.path.join(BASE_DIR, 'data', 'catalogue_films.csv'))
     return df
 
 # ===== CHARGER LES REVIEWS =====
 @st.cache_data
 def load_reviews():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    reviews = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_with_sentiment.csv'))
-    summary = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_summary.csv'))
+    reviews = pd.read_csv(os.path.join(BASE_DIR, 'output', 'reviews_with_sentiment.csv'))
+    summary = pd.read_csv(os.path.join(BASE_DIR, 'output', 'reviews_summary.csv'))
     return reviews, summary
 
-# ===== CHARGER LE MOD├êLE ML =====
+# ===== CHARGER LE ML =====
 @st.cache_data
 def load_ml_model():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    df = pd.read_csv(os.path.join(BASE_DIR, '..', 'data', 'catalogue_films.csv'))
+    df = pd.read_csv(os.path.join(BASE_DIR, 'data', 'catalogue_films.csv'))
     tfidf = TfidfVectorizer(max_features=1000, stop_words="english")
     overview_matrix = tfidf.fit_transform(df["overview"].fillna(""))
     genres = df["genres_imdb_list"].apply(ast.literal_eval)
@@ -242,7 +273,7 @@ def get_backdrop_url(backdrop_path):
         return f"https://image.tmdb.org/t/p/original{backdrop_path}"
     return None
 
-# ===== R├ëCUP├ëRER BANDE ANNONCE =====
+# ===== RÈCUPÈRER BANDE ANNONCE =====
 @st.cache_data
 def get_trailer(tmdb_id):
     try:
@@ -263,6 +294,23 @@ def get_trailer(tmdb_id):
         pass
     return None
 
+# ===== RÉCUPÉRER LA DESCRIPTION EN FRANÇAIS =====
+@st.cache_data
+def get_french_overview(tmdb_id, default_overview):
+    if pd.isna(tmdb_id):
+        return default_overview
+    try:
+        url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}"
+        params = {"api_key": TMDB_API_KEY, "language": "fr-FR"}
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('overview'):
+                return data['overview']
+    except:
+        pass
+    return default_overview
+
 # ===== SESSION STATE =====
 if 'page_recherche' not in st.session_state:
     st.session_state['page_recherche'] = 1
@@ -279,9 +327,16 @@ if 'admin_connecte' not in st.session_state:
 if 'show_login' not in st.session_state:
     st.session_state['show_login'] = False
 
-# ===== TITRE =====
-st.markdown("<h1>­ƒÄ¼ Cin├®ma Creuse</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#9a8c98; font-size:16px; margin-top:-20px;'>D├®couvrez notre s├®lection de films</p>", unsafe_allow_html=True)
+# ===== TITRE & LOGO =====
+dossier_actuel = os.path.dirname(os.path.abspath(__file__))
+chemin_logo = os.path.join(dossier_actuel, "logo-remove.png")
+
+logo_col1, logo_col2, logo_col3 = st.columns([2, 1, 2])
+
+with logo_col2:
+    st.image(chemin_logo, use_container_width=True)
+
+st.markdown("<p style='text-align:center; color:#c9a84c; font-size:16px; margin-top:-20px;'>Découvrez notre sélection de films</p>", unsafe_allow_html=True)
 st.divider()
 
 # ===== SLIDESHOW =====
@@ -330,11 +385,15 @@ afficher_slideshow()
 
 # ===== NAVIGATION =====
 if st.session_state['admin_connecte']:
-    page = st.sidebar.selectbox("Navigation", ["­ƒÅá Accueil", "­ƒöì Recherche & Filtres", "­ƒöÉ Admin"])
-else:
-    page = st.sidebar.selectbox("Navigation", ["­ƒÅá Accueil", "­ƒöì Recherche & Filtres"])
+    page = st.sidebar.selectbox("Navigation", ["🏠 Accueil", "🔍 Recherche & Filtres", "🔐 Admin"])
     st.sidebar.markdown("---")
-    if st.sidebar.button("­ƒöÉ Acc├¿s Admin"):
+    if st.sidebar.button("🚪 Déconnexion"):
+        st.session_state['admin_connecte'] = False
+        st.rerun()
+else:
+    page = st.sidebar.selectbox("Navigation", ["🏠 Accueil", "🔍 Recherche & Filtres"])
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🔐 Accès Admin"):
         st.session_state['show_login'] = True
 
 if page != st.session_state.get('page_actuelle'):
@@ -370,7 +429,7 @@ def format_votes(v):
 
 # ===== PAGE DETAIL =====
 def afficher_detail(film):
-    if st.button("ÔåÉ Retour"):
+    if st.button("← Retour"):
         st.session_state['film_selectionne'] = None
         st.rerun()
 
@@ -381,8 +440,9 @@ def afficher_detail(film):
     duree = film.get('runtime_imdb', '?')
     note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
     popularite = round(film.get('tmdb_popularity', 0), 0) if pd.notna(film.get('tmdb_popularity')) else '?'
-    overview = film.get('overview', 'Pas de description disponible.')
     tmdb_id = film.get('tmdb_id', None)
+    overview_original = film.get('overview', 'Pas de description disponible.')
+    overview = get_french_overview(tmdb_id, overview_original)
 
     backdrop_url = get_backdrop_url(film.get('backdrop_path', ''))
     if backdrop_url:
@@ -401,31 +461,31 @@ def afficher_detail(film):
     with col2:
         st.markdown(f"<h2>{titre_fr}</h2>", unsafe_allow_html=True)
         if titre_fr != titre:
-            st.markdown(f"<p style='color:#9a8c98; font-style:italic;'>Titre original : {titre}</p>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color:#9a8c98; font-size:15px;'>­ƒôà {annee} &nbsp;|&nbsp; ÔÅ▒´©Å {int(duree) if pd.notna(duree) else '?'} min &nbsp;|&nbsp; ­ƒÄ¡ {genres_complets}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#c9a84c; font-style:italic;'>Titre original : {titre}</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#c9a84c; font-size:15px;'>📅 {annee} &nbsp;|&nbsp; ⏱ {int(duree) if pd.notna(duree) else '?'} min &nbsp;|&nbsp; 🎭 {genres_complets}</p>", unsafe_allow_html=True)
         st.markdown(f"<p style='color:#f2e9e4; font-size:15px; line-height:1.7;'>{overview}</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
         col_a, col_b = st.columns(2)
         with col_a:
-            st.metric("Note", f"Ô¡É {note}/10")
+            st.metric("Note", f"⭐ {note}/10")
         with col_b:
             votes = film.get('imdb_votes', '?')
-            st.metric("Votes", f"­ƒù│´©Å {format_votes(int(votes))}" if pd.notna(votes) else '?')
+            st.metric("Votes", f"👥 {format_votes(int(votes))}" if pd.notna(votes) else '?')
 
     st.divider()
 
-    st.markdown("<h3>­ƒÄ¼ Bande annonce</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>🎬 Bande annonce</h3>", unsafe_allow_html=True)
     if pd.notna(tmdb_id):
         with st.spinner("Chargement..."):
             trailer_key = get_trailer(tmdb_id)
         if trailer_key:
             st.video(f"https://www.youtube.com/watch?v={trailer_key}")
         else:
-            st.markdown('<div class="avis-box">­ƒÄ¼ Bande annonce non disponible</div>', unsafe_allow_html=True)
+            st.markdown('<div class="avis-box">🎬 Bande annonce non disponible</div>', unsafe_allow_html=True)
 
     st.divider()
-    with st.expander("­ƒÄÑ Films similaires", expanded=False):
+    with st.expander("🎥 Films similaires", expanded=False):
         with st.spinner("Calcul des recommandations..."):
             df_ml, sim = load_ml_model()
             similaires = recommend(titre, df_ml, sim, n=10)
@@ -434,7 +494,7 @@ def afficher_detail(film):
             afficher_bandeau("", similaires, "similaires")
 
     st.divider()
-    with st.expander("­ƒÄ¡ Avis spectateurs", expanded=False):
+    with st.expander("🎭 Avis spectateurs", expanded=False):
         film_reviews = reviews_df[
             (reviews_df['title'] == titre_fr) |
             (reviews_df['title'] == titre)
@@ -444,18 +504,23 @@ def afficher_detail(film):
             st.markdown('<div class="avis-box">Aucun avis disponible pour ce film.</div>', unsafe_allow_html=True)
         else:
             nb = len(film_reviews)
-            st.markdown(f"<p style='color:#9a8c98;'>­ƒÆ¼ {nb} avis spectateurs</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#c9a84c;'>💬 {nb} avis spectateurs</p>", unsafe_allow_html=True)
 
             nb_affiche = st.session_state.get(f'nb_avis_{titre}', 3)
 
             for _, avis in film_reviews.head(nb_affiche).iterrows():
                 sentiment = avis['sentiment']
-                emoji = "­ƒæì" if sentiment == "positive" else "­ƒæÄ" if sentiment == "negative" else "­ƒÿÉ"
-                couleur = "#a8d5a2" if sentiment == "positive" else "#d5a2a2" if sentiment == "negative" else "#9a8c98"
+                sentiment_fr = "Positif" if sentiment == "positive" else "Négatif" if sentiment == "negative" else "Neutre"
+                emoji = "😊" if sentiment == "positive" else "😠" if sentiment == "negative" else "😐"
+                couleur = "#a8d5a2" if sentiment == "positive" else "#d5a2a2" if sentiment == "negative" else "#c9a84c"
+                try:
+                    contenu_fr = GoogleTranslator(source='auto', target='fr').translate(avis['content'])
+                except:
+                    contenu_fr = avis['content']
                 st.markdown(f"""
-                <div style="background:#4a4e69; border-left: 4px solid {couleur}; border-radius:8px; padding:15px; margin-bottom:10px;">
-                   <span style="color:{couleur}; font-weight:700;">{emoji} {sentiment.capitalize()}</span>
-                    <p style="color:#f2e9e4; margin-top:8px; line-height:1.6;">{avis['content']}</p>
+                <div style="background:#251b3d; border-left: 4px solid {couleur}; border-radius:8px; padding:15px; margin-bottom:10px;">
+                   <span style="color:{couleur}; font-weight:700;">{emoji} {sentiment_fr}</span>
+                    <p style="color:#f2e9e4; margin-top:8px; line-height:1.6;">{contenu_fr}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -464,87 +529,105 @@ def afficher_detail(film):
                     st.session_state[f'nb_avis_{titre}'] = nb_affiche + 3
                     st.rerun()
 
-    if st.button("ÔåÉ Retour", key="retour_bas"):
+    if st.button("← Retour", key="retour_bas"):
         st.session_state['film_selectionne'] = None
         st.rerun()
 
 # ===== AFFICHER GRILLE =====
 def afficher_grille(films_df, key_prefix):
-    # On utilise 4 colonnes pour une meilleure lisibilit├® sur ├®cran large
-    cols = st.columns(4)
+    # On transforme le DataFrame en liste pour pouvoir le découper proprement par paquets de 4
+    films_list = list(films_df.iterrows())
     
-    for idx, (_, film) in enumerate(films_df.iterrows()):
-        with cols[idx % 4]:
-            # On utilise le conteneur natif avec hauteur fixe pour harmoniser tous les blocs
-            with st.container(border=True, height=500):
-                poster_url = get_poster_url(film.get('poster_path', ''))
-                titre = film.get('title_fr', film.get('original_title_imdb', 'Titre inconnu'))
-                annee = int(film.get('year', 0)) if pd.notna(film.get('year')) else '?'
-                note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
-                
-                # Image
-                st.image(poster_url, use_container_width=True)
-                
-                # Titre tronqu├® si trop long pour ├®viter le d├®bordement
-                titre_court = titre if len(titre) < 25 else titre[:22] + "..."
-                st.markdown(f"**{titre_court}**")
-                
-                # Infos
-                st.write(f"Note : {note}/10")
-                
-                # Bouton "Voir plus" (plus parlant que la fl├¿che)
-                if st.button("Voir plus", key=f"{key_prefix}_{idx}"):
-                    st.session_state['film_selectionne'] = film.to_dict()
-                    st.rerun()
+    # On boucle de 4 en 4 pour créer des lignes horizontales
+    for i in range(0, len(films_list), 4):
+        paquet_de_films = films_list[i:i+4]
+        cols = st.columns(4) 
+        
+        for idx, (_, film) in enumerate(paquet_de_films):
+            with cols[idx]:
+                with st.container(border=True):
+                    poster_url = get_poster_url(film.get('poster_path', ''))
+                    titre = film.get('title_fr', film.get('original_title_imdb', 'Titre inconnu'))
+                    genres = film.get('genres_imdb', 'N/A')
+
+                    genres = ", ".join(
+                        TRAD_GENRES.get(g.strip(), g.strip())
+                        for g in genres.split(",")
+)
+                    note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
+                    
+                    # 1. L'image entière
+                    st.image(poster_url, use_container_width=True)
+                    
+                    # 2. Zone fixe de 110px pour le Titre + Genre + Note
+                    # Le "space-between" aligne la note tout en bas de cette zone automatiquement
+                    st.markdown(f"""
+                    <div style="height: 110px; margin-top: 10px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <div style="font-family: 'Poppins', sans-serif; color: #f2e9e4; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
+                                {titre}
+                            </div>
+                            <div style="color: #c9a84c; font-size: 12px; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                🎭 {genres}
+                            </div>
+                        </div>
+                        <div style="color: #c9ada7; font-size: 13px; font-weight: bold;">
+                            ⭐ {note}/10
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # 3. Le bouton "Voir plus" 
+                    if st.button("Voir plus", key=f"{key_prefix}_{i+idx}", use_container_width=True):
+                        st.session_state['film_selectionne'] = film.to_dict()
+                        st.rerun()
 
 # ===== PAGE ADMIN =====
 def afficher_admin():
-    col_titre, col_archives, col_deco = st.columns([6, 2, 2])
+    col_titre, col_archives = st.columns([8, 2])
     with col_titre:
-        st.markdown("<h2>­ƒöÉ Tableau de bord Admin</h2>", unsafe_allow_html=True)
+        st.markdown("<h2>🔐 Tableau de bord Admin</h2>", unsafe_allow_html=True)
     with col_archives:
-        if st.button("­ƒôü Archives"):
+        if st.button("📁 Archives"):
             st.session_state['show_archives'] = not st.session_state.get('show_archives', False)
-    with col_deco:
-        if st.button("­ƒÜ¬ D├®connexion"):
-            st.session_state['admin_connecte'] = False
-            st.rerun()
 
     st.divider()
 
     if st.session_state.get('show_archives', False):
-        st.markdown("<h3>­ƒôü Archives ÔÇö Bilans & ├ëtudes</h3>", unsafe_allow_html=True)
+        st.markdown("<h3>📁 Archives — Bilans & Etudes</h3>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        archives_dir = os.path.join(BASE_DIR, '..', 'archives')
+        archives_dir = os.path.join(BASE_DIR, 'archives')
         os.makedirs(archives_dir, exist_ok=True)
-        uploaded = st.file_uploader("Ô×ò Ajouter une archive", type="pdf", key="upload_archive")
+        uploaded = st.file_uploader("➕ Ajouter une archive", type="pdf", key="upload_archive")
         if uploaded is not None:
             with open(os.path.join(archives_dir, uploaded.name), 'wb') as f:
                 f.write(uploaded.getbuffer())
-            st.success(f"Ô£à '{uploaded.name}' ajout├® !")
+            st.success(f"✅ '{uploaded.name}' ajouté !")
             st.rerun()
         st.markdown("<br>", unsafe_allow_html=True)
         fichiers = [f for f in os.listdir(archives_dir) if f.endswith('.pdf')]
         if fichiers:
+            import base64
             for fichier in fichiers:
                 chemin = os.path.join(archives_dir, fichier)
+                with open(chemin, 'rb') as f:
+                    pdf_data = f.read()
                 col_dl, col_sup = st.columns([6, 1])
                 with col_dl:
-                    with open(chemin, 'rb') as f:
-                        st.download_button(label=f"­ƒôä {fichier}", data=f, file_name=fichier, mime="application/pdf", key=f"dl_{fichier}")
+                    st.download_button(label=f"📄 {fichier}", data=pdf_data, file_name=fichier, mime="application/pdf", key=f"dl_{fichier}")
                 with col_sup:
-                    if st.button("­ƒùæ´©Å", key=f"sup_{fichier}"):
+                    if st.button("🗑", key=f"sup_{fichier}"):
                         os.remove(chemin)
                         st.rerun()
         else:
-            st.markdown("<p style='color:#9a8c98; font-style:italic;'>Aucune archive disponible.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#c9a84c; font-style:italic;'>Aucune archive disponible.</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
 
     st.divider()
 
-    # 1. SECTION KPIs
-    st.markdown("<h3>­ƒôè Vue d'ensemble</h3>", unsafe_allow_html=True)
+    # ---- 1. VUE D'ENSEMBLE ----
+    st.markdown("<h3>📊 Vue d'ensemble</h3>", unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     total_films = len(df)
     note_moy = round(df['imdb_rating'].mean(), 2) if 'imdb_rating' in df.columns else 0
@@ -552,16 +635,102 @@ def afficher_admin():
     annee_min = int(df['year'].min()) if 'year' in df.columns else 0
     annee_max = int(df['year'].max()) if 'year' in df.columns else 0
     with col1:
-        st.metric("Nombre de films", f"{total_films:,}")
+        st.metric("Nombre de films", f"{total_films:,}".replace(",", " "))
     with col2:
-        st.metric("Note moyenne", f"Ô¡É {note_moy}")
+        st.metric("Note moyenne", f"⭐ {note_moy}")
     with col3:
         st.metric("Genres", nb_genres)
     with col4:
-        st.metric("P├®riode", f"{annee_min}-{annee_max}")
+        st.metric("Période", f"{annee_min}-{annee_max}")
 
     st.divider()
 
+    # Chargement movies_final une seule fois
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    movies = None
+    movies_genres = None
+    try:
+        movies = pd.read_csv(os.path.join(BASE_DIR, 'data', 'movies_final.csv'))
+        movies_genres = movies.copy()
+        movies_genres["genres_final"] = movies_genres["genres_final"].str.split(",")
+        movies_genres = movies_genres.explode("genres_final").reset_index(drop=True)
+        movies_genres["genres_final"] = movies_genres["genres_final"].str.strip()
+    except Exception:
+        pass
+
+    # ---- 2. TOP GENRES ----
+    st.markdown("<h3>🎬 Analyse des genres les plus représentés</h3>", unsafe_allow_html=True)
+    if movies_genres is not None:
+        try:
+            kpi_genres = movies_genres["genres_final"].value_counts(normalize=True).mul(100).rename_axis("genres_final").reset_index(name="Pourcentage")
+            kpi_genres = kpi_genres.sort_values("Pourcentage", ascending=False).reset_index(drop=True)
+            top_n_genres = st.slider("Top N genres :", min_value=3, max_value=min(30, len(kpi_genres)), value=10, step=1, key="kpi2_topn")
+            df_kpi2 = kpi_genres.head(top_n_genres).sort_values("Pourcentage", ascending=True)
+            fig_kpi2 = px.bar(df_kpi2, x="Pourcentage", y="genres_final", orientation="h",
+                color="Pourcentage", color_continuous_scale='PiYG',
+                labels={"genres_final": "Genre", "Pourcentage": "Pourcentage (%)"},
+                title=f"Top {top_n_genres} des genres les plus représentés", height=520)
+            fig_kpi2.update_layout(margin=dict(l=160, r=40, t=70, b=40),
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
+            st.plotly_chart(fig_kpi2, use_container_width=True)
+        except Exception as e:
+            st.warning(f"⚠ Top genres indisponible : {e}")
+    else:
+        st.warning("⚠ Fichier movies_final.csv introuvable.")
+
+    st.divider()
+
+    # ---- 3. REPARTITION GENRES PAR DECENNIE ----
+    st.markdown("<h3>📊 Genres : évolution et répartition</h3>", unsafe_allow_html=True)
+    if movies_genres is not None:
+        try:
+            genre_decennie = movies_genres.groupby(["decennie", "genres_final"]).size().reset_index(name="nb_films")
+            genre_decennie["total_decennie"] = genre_decennie.groupby("decennie")["nb_films"].transform("sum")
+            genre_decennie["pourcentage"] = (genre_decennie["nb_films"] / genre_decennie["total_decennie"]) * 100
+            top_genres_kpi3 = movies_genres["genres_final"].value_counts().head(8).index
+            genre_decennie_top = genre_decennie[genre_decennie["genres_final"].isin(top_genres_kpi3)].copy()
+            genre_decennie_top["decennie_num"] = pd.to_numeric(genre_decennie_top["decennie"], errors="coerce")
+            fig_kpi3 = px.line(genre_decennie_top, x="decennie_num", y="pourcentage", color="genres_final",
+            markers=True, labels={"decennie_num": "Décennie", "pourcentage": "Pourcentage (%)", "genres_final": "Genre"},
+            title="Évolution des genres par décennie", height=600)
+            decades = sorted(genre_decennie_top["decennie_num"].dropna().unique())
+            fig_kpi3.update_xaxes(rangeslider_visible=True, tickmode="array", tickvals=decades,
+                ticktext=[str(int(d)) for d in decades], showgrid=False)
+            fig_kpi3.update_yaxes(showgrid=True)
+            fig_kpi3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
+            st.plotly_chart(fig_kpi3, use_container_width=True)
+        except Exception as e:
+            st.warning(f"⚠ Répartition genres indisponible : {e}")
+
+    st.divider()
+
+    # ---- 4. EVOLUTION DUREE DES FILMS ----
+    st.markdown("<h3>⏱ Évolution de la durée des films par décennie</h3>", unsafe_allow_html=True)
+    if movies_genres is not None:
+        try:
+            genre_counts = movies_genres["genres_final"].value_counts()
+            all_genres = genre_counts.index.tolist()
+            genres_choisis = st.multiselect("Sélectionner les genres :", all_genres, default=genre_counts.head(6).index.tolist(), key="kpi1_genres")
+            if genres_choisis:
+                selected = genres_choisis[:20]
+                df_kpi1 = movies_genres[movies_genres["genres_final"].isin(selected)].groupby(["decennie", "genres_final"])["runtime_final"].mean().reset_index()
+                df_kpi1["decennie_num"] = pd.to_numeric(df_kpi1["decennie"], errors="coerce")
+                df_kpi1 = df_kpi1.sort_values(["genres_final", "decennie_num"])
+                fig_kpi1 = px.line(df_kpi1, x="decennie_num", y="runtime_final", color="genres_final",
+                    facet_col="genres_final", facet_col_wrap=3, markers=True,
+                    title=f"Durée moyenne par décennie — {len(selected)} genre(s)",
+                    labels={"decennie_num": "Décennie", "runtime_final": "Durée (min)"})
+                fig_kpi1.update_layout(height=300 + 220 * ((len(selected) - 1) // 3 + 1),
+                    margin=dict(t=90, l=60, r=40, b=60), showlegend=False,
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
+                fig_kpi1.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+                st.plotly_chart(fig_kpi1, use_container_width=True)
+        except Exception as e:
+            st.warning(f"⚠ Évolution durée indisponible : {e}")
+
+    st.divider()
+
+    # ---- 5. TOP N ACTEURS/REALISATEURS ----
     def parse_list_safe(x):
         if x is None or (isinstance(x, float) and np.isnan(x)):
             return []
@@ -575,72 +744,127 @@ def afficher_admin():
     df["_writers"]   = df["writers_names"].apply(parse_list_safe)
     df["_composers"] = df["composers_names"].apply(parse_list_safe)
 
-    # ---- GRAPHIQUE 1 : TOP N ----
-    st.markdown("<h3>­ƒÄ¼ Top N ÔÇö Acteurs / R├®alisateurs / etc.</h3>", unsafe_allow_html=True)
-    col_choice = st.selectbox("Famille :", ["Acteurs", "R├®alisateurs", "Sc├®naristes", "Compositeurs"], key="topn_famille")
-    col_map = {"Acteurs": "_actors", "R├®alisateurs": "_directors", "Sc├®naristes": "_writers", "Compositeurs": "_composers"}
-    top_n = st.slider("Top (Qt├®) :", min_value=5, max_value=50, value=10, step=5, key="topn_slider")
+    st.markdown("<h3>🎬 Panorama des rôles créatifs — Classement.</h3>", unsafe_allow_html=True)
+    col_choice = st.selectbox("Famille :", ["Acteurs", "Réalisateurs", "Scénaristes", "Compositeurs"], key="topn_famille")
+    col_map = {"Acteurs": "_actors", "Réalisateurs": "_directors", "Scénaristes": "_writers", "Compositeurs": "_composers"}
+    top_n = st.slider("Top (Qté) :", min_value=5, max_value=50, value=10, step=5, key="topn_slider")
     col_sel = col_map[col_choice]
     exploded = df.explode(col_sel)
     vc = exploded[col_sel].dropna().value_counts().head(top_n).reset_index()
     vc.columns = ["Label", "Count"]
     vc["Label"] = vc["Label"].astype(str).str.strip("[]'\"")
     if not vc.empty:
-        fig_topn = px.bar(vc.sort_values("Count"), x="Count", y="Label", orientation="h",
-            color="Count", color_continuous_scale=px.colors.sequential.Viridis,
-            title=f"{col_choice} ÔÇö Top {top_n}")
-        fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
+      fig_topn = px.bar(vc.sort_values("Count"), x="Count", y="Label", orientation="h",
+            color="Count", color_continuous_scale='PiYG',
+            labels={"Count": "Nombre", "Label": "Noms"},
+            title=f"{col_choice} — Top {top_n}")
+      fig_topn.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
-        st.plotly_chart(fig_topn, use_container_width=True)
+      st.plotly_chart(fig_topn, use_container_width=True)
 
     st.divider()
 
-    # ---- GRAPHIQUE 2 : HISTOGRAMME ----
-    st.markdown("<h3>­ƒôè Distribution ÔÇö Dur├®e / Notes</h3>", unsafe_allow_html=True)
+    # ---- 6. TOP PAYS / SOCIETES ----
+    st.markdown("<h3>🌍 Pays & Sociétés de production — Classement</h3>", unsafe_allow_html=True)
+    try:
+        df_alix = df.copy()
+        df_alix["_countries"] = df_alix["production_companies_country"].apply(parse_list_safe)
+        df_alix["_companies"] = df_alix["production_companies_name"].apply(parse_list_safe)
+        famille_alix = st.selectbox("Famille :", ["Pays", "Sociétés"], key="kpi5_famille")
+        top_n_alix = st.slider("Top (Qté) :", min_value=5, max_value=50, value=10, step=5, key="kpi5_topn")
+        col_alix = "_countries" if famille_alix == "Pays" else "_companies"
+        exploded_alix = df_alix.explode(col_alix)
+        vc_alix = exploded_alix[col_alix].dropna().value_counts().head(top_n_alix).reset_index()
+        vc_alix.columns = ["Label", "Count"]
+        vc_alix["Label"] = vc_alix["Label"].astype(str).str.strip("[]'\"")
+        vc_alix = vc_alix[vc_alix["Label"] != ""]
+        vc_alix = vc_alix[vc_alix["Label"] != "nan"]
+        vc_alix = vc_alix.groupby("Label")["Count"].sum().reset_index().sort_values("Count", ascending=True)
+        fig_kpi5 = px.bar(vc_alix.sort_values("Count"), x="Count", y="Label", orientation="h",
+            labels={"Count": "Nombre", "Label": "Noms"},
+            color="Count", color_continuous_scale='PiYG',
+            title=f"{famille_alix} — Top {top_n_alix}")
+        fig_kpi5.update_layout(margin=dict(l=220, r=40, t=70, b=60), height=550,
+            plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
+        st.plotly_chart(fig_kpi5, use_container_width=True)
+    except Exception as e:
+        st.warning(f"⚠ Top Pays/Sociétés indisponible : {e}")
+
+    st.divider()
+
+    # ---- 7. DISTRIBUTION DUREE / NOTES ----
+    st.markdown("<h3>📊 Distribution des films — Durée & Notes</h3>", unsafe_allow_html=True)
     df["runtime_imdb"] = pd.to_numeric(df.get("runtime_imdb"), errors="coerce")
     df["imdb_rating"]  = pd.to_numeric(df.get("imdb_rating"),  errors="coerce")
-    hist_choice = st.selectbox("Variable :", ["Distribution Dur├®e", "Distribution Notes"], key="hist_var")
+    hist_choice = st.selectbox("Variable :", ["Distribution Durée", "Distribution Notes"], key="hist_var")
     hist_bins = st.slider("Nb classes :", min_value=10, max_value=100, value=30, step=5, key="hist_bins")
-    hist_col = "runtime_imdb" if hist_choice == "Distribution Dur├®e" else "imdb_rating"
+    hist_col = "runtime_imdb" if hist_choice == "Distribution Durée" else "imdb_rating"
     clean = df[hist_col].dropna()
     fig_hist = px.histogram(clean, x=clean, nbins=hist_bins,
-        color_discrete_sequence=["#3B528B"], title=f"{hist_choice} ÔÇö {hist_bins} classes")
+        labels={"x": "Durée" if hist_col == "runtime_imdb" else "Notes", "count": "Nombre"},
+        color_discrete_sequence=["#4dac26"], title=f"{hist_choice} — {hist_bins} classes")
     fig_hist.update_layout(height=500, margin=dict(l=60, r=40, t=60, b=60), bargap=0.05,
         plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
     st.plotly_chart(fig_hist, use_container_width=True)
 
     st.divider()
 
-    # ---- GRAPHIQUE 3 : SATISFACTION VS POPULARIT├ë ----
-    st.markdown("<h3>­ƒôê Aide ├á la d├®cision : Satisfaction vs Popularit├®</h3>", unsafe_allow_html=True)
+    # ---- 8. RENTABILITE ROI ----
+    st.markdown("<h3>💰 Genres — Rentabilité (ROI)</h3>", unsafe_allow_html=True)
+    if movies_genres is not None:
+        try:
+            profit = movies_genres.dropna(subset=["budget_tmdb", "revenue_tmdb", "genres_final"]).copy()
+            profit = profit[(profit["budget_tmdb"] > 0) & (profit["revenue_tmdb"] > 0)]
+            profit["roi"] = (profit["revenue_tmdb"] - profit["budget_tmdb"]) / profit["budget_tmdb"]
+            rentabilite_genre = profit.groupby("genres_final")["roi"].mean().reset_index().sort_values(by="roi", ascending=False)
+            col_r1, col_r2 = st.columns([2, 2])
+            with col_r1:
+                top_n_roi = st.slider("Top N :", min_value=3, max_value=min(30, len(rentabilite_genre)), value=10, step=1, key="kpi4_topn")
+            with col_r2:
+                ordre_roi = st.radio("Ordre :", ["Décroissant", "Croissant"], horizontal=True, key="kpi4_ordre")
+            df_kpi4 = rentabilite_genre.head(top_n_roi) if ordre_roi == "Décroissant" else rentabilite_genre.sort_values("roi", ascending=True).head(top_n_roi)
+            df_kpi4 = df_kpi4.sort_values("roi", ascending=True)
+            fig_kpi4 = px.bar(df_kpi4, x="roi", y="genres_final", orientation="h",
+                color="roi", color_continuous_scale='PiYG',
+                labels={"roi": "ROI moyen", "genres_final": "Genre"},
+                title=f"Top {top_n_roi} Genres par ROI moyen", height=520)
+            fig_kpi4.update_layout(margin=dict(l=160, r=40, t=70, b=40),
+                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4')
+            st.plotly_chart(fig_kpi4, use_container_width=True)
+        except Exception as e:
+            st.warning(f"⚠ ROI indisponible : {e}")
+
+    st.divider()
+
+    # ---- 9. SATISFACTION VS POPULARITE ----
+    st.markdown("<h3>📈 Indicateurs décisionnels — Satisfaction & Popularité</h3>", unsafe_allow_html=True)
     try:
-        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-        df_summary = pd.read_csv(os.path.join(BASE_DIR, '..', 'output', 'reviews_summary.csv'))
+        df_summary = pd.read_csv(os.path.join(BASE_DIR, 'output', 'reviews_summary.csv'))
         col_f1, col_f2 = st.columns([2, 2])
         with col_f1:
             min_avis = st.slider("Nombre minimum d'avis :", 0, int(df_summary['nb_reviews'].max()), 5, key="min_avis_slider")
         with col_f2:
-            filtre_type = st.radio("Afficher :", ["Positifs", "N├®gatifs", "Les deux"], horizontal=True, key="filtre_avis")
+            filtre_type = st.radio("Afficher :", ["Positifs", "Négatifs", "Les deux"], horizontal=True, key="filtre_avis")
         df_filtre_avis = df_summary[df_summary['nb_reviews'] >= min_avis].copy()
         if filtre_type == "Positifs":
             df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x="nb_positives", y="title", orientation="h",
-                title="Top films ÔÇö Avis positifs", color_discrete_sequence=["#c9ada7"])
-        elif filtre_type == "N├®gatifs":
+                title="Top films — Avis positifs", color_discrete_sequence=["#4dac26"])
+        elif filtre_type == "Négatifs":
             df_plot = df_filtre_avis.sort_values("nb_negatives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x="nb_negatives", y="title", orientation="h",
-                title="Top films ÔÇö Avis n├®gatifs", color_discrete_sequence=["#9a8c98"])
+                title="Top films — Avis négatifs", color_discrete_sequence=["#d01c8b"])
         else:
             df_plot = df_filtre_avis.sort_values("nb_positives", ascending=True).tail(20)
             fig_avis = px.bar(df_plot, x=["nb_positives", "nb_negatives"], y="title",
-                orientation="h", barmode="group", title="Top films ÔÇö Avis positifs vs n├®gatifs",
-                color_discrete_sequence=["#c9ada7", "#9a8c98"])
+                orientation="h", barmode="group", title="Top films — Avis positifs vs négatifs",
+                color_discrete_sequence=["#4dac26", "#d01c8b"])
         fig_avis.update_layout(height=550, plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)', font_color='#f2e9e4',
             xaxis_title="Nombre d'avis", yaxis_title="Film", legend_title="Type d'avis")
         st.plotly_chart(fig_avis, use_container_width=True)
     except FileNotFoundError:
-        st.warning("ÔÜá´©Å Fichier reviews_summary.csv introuvable.")
+        st.warning("⚠ Fichier reviews_summary.csv introuvable.")
 
 # ===== BANDEAU NETFLIX =====
 def afficher_bandeau(titre, films_df, key_prefix):
@@ -651,47 +875,63 @@ def afficher_bandeau(titre, films_df, key_prefix):
     if f"page_{key_prefix}" not in st.session_state:
         st.session_state[f"page_{key_prefix}"] = 0
     
-    page = st.session_state[f"page_{key_prefix}"]
-    debut = page * 5
+    page_b = st.session_state[f"page_{key_prefix}"]
+    debut = page_b * 5
     films_page = films.iloc[debut:debut+5]
     
     col_prev, col_titre, col_next = st.columns([1, 8, 1])
     with col_prev:
-        if page > 0:
-            if st.button("ÔÇ╣", key=f"prev_{key_prefix}"):
+        if page_b > 0:
+            if st.button("‹", key=f"prev_{key_prefix}"):
                 st.session_state[f"page_{key_prefix}"] -= 1
                 st.rerun()
     with col_next:
         if debut + 5 < len(films):
-            if st.button("ÔÇ║", key=f"next_{key_prefix}"):
+            if st.button("›", key=f"next_{key_prefix}"):
                 st.session_state[f"page_{key_prefix}"] += 1
                 st.rerun()
     
     cols = st.columns(5)
     for col_idx, (_, film) in enumerate(films_page.iterrows()):
         with cols[col_idx]:
-            poster_url = get_poster_url(film.get('poster_path', ''))
-            titre_film = film.get('title_fr', film.get('original_title_imdb', ''))
-            note = round(film.get('imdb_rating', 0), 1)
-            titre_court = titre_film[:15] + "..." if len(titre_film) > 15 else titre_film
-            
-            st.markdown('<div class="card-wrapper">', unsafe_allow_html=True)
-            st.markdown(f"""
-            <div class="film-card">
-                <img src="{poster_url}" alt="{titre_film}">
-                <div class="film-info">
-                    <p class="film-title">{titre_court}</p>
-                    <p class="film-rating">Ô¡É {note}</p>
+            # ON UTILISE UN CONTAINER STREAMLIT : Tout reste enfermé proprement dedans
+            with st.container(border=True):
+                poster_url = get_poster_url(film.get('poster_path', ''))
+                titre_film = film.get('title_fr', film.get('original_title_imdb', ''))
+                note = round(film.get('imdb_rating', 0), 1) if pd.notna(film.get('imdb_rating')) else '?'
+                genres = film.get('genres_imdb', 'N/A')
+                genres = ", ".join(
+                    TRAD_GENRES.get(g.strip(), g.strip())
+                    for g in genres.split(",")
+                )
+                
+                # 1. L'image
+                st.image(poster_url, use_container_width=True)
+                
+                # 2. Zone fixe de 110px pour bloquer le texte et la note au même niveau
+                st.markdown(f"""
+                <div style="height: 110px; margin-top: 10px; margin-bottom: 10px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="font-family: 'Poppins', sans-serif; color: #ffffff; font-size: 14px; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;">
+                            {titre_film}
+                        </div>
+                        <div style="color: #c9a84c; font-size: 11px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            {genres}
+                        </div>
+                    </div>
+                    <div style="color: #f1c40f; font-size: 13px; font-weight: bold;">
+                        ⭐ {note}
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
-            if st.button("ÔûÂ", key=f"{key_prefix}_{page}_{col_idx}"):
-                st.session_state['film_selectionne'] = film.to_dict()
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+                
+                # 3. Le bouton Play généré à l'intérieur du container
+                if st.button("Voir plus", key=f"{key_prefix}_{page_b}_{col_idx}"):
+                    st.session_state['film_selectionne'] = film.to_dict()
+                    st.rerun()
 
 # ===== PAGE ACCUEIL =====
-if page == "­ƒÅá Accueil":
+if page == "🏠 Accueil":
 
     if st.session_state.get('show_login') and not st.session_state['admin_connecte']:
         username = st.text_input("Nom d'utilisateur")
@@ -715,10 +955,29 @@ if page == "­ƒÅá Accueil":
     else:
         col1, col2 = st.columns([2, 1])
         with col1:
-            recherche_accueil = st.text_input("­ƒöì Rechercher un film", placeholder="Ex: Inception...", key="recherche_accueil")
+            recherche_accueil = st.text_input("🔍 Rechercher un film", placeholder="Ex: Inception...", key="recherche_accueil")
         with col2:
-            tous_genres_accueil = ['Tous'] + sorted(df['genres_imdb'].dropna().str.split(',').explode().str.strip().value_counts().head(10).index.tolist())
-            genre_accueil = st.selectbox("­ƒÄ¼ Filtrer par genre :", tous_genres_accueil, key="genre_accueil")
+            genres_originaux = sorted(
+                df['genres_imdb']
+                .dropna()
+                .str.split(',')
+                .explode()
+                .str.strip()
+                .value_counts()
+                .head(10)
+                .index.tolist()
+            )
+
+            genres_affiches = ["Tous"] + [
+                TRAD_GENRES.get(g, g)
+                for g in genres_originaux
+            ]
+
+            genre_accueil = st.selectbox(
+                "🎬 Filtrer par genre :",
+                genres_affiches,
+                key="genre_accueil"
+            )
 
         if recherche_accueil and len(recherche_accueil) >= 2:
             df_recherche = df[
@@ -726,32 +985,60 @@ if page == "­ƒÅá Accueil":
                 df['original_title_imdb'].str.lower().str.startswith(recherche_accueil.lower())
             ]
             if len(df_recherche) > 0:
-                suggestions = df_recherche['title_fr'].tolist()[:8]
-                choix = st.selectbox("­ƒÄ¼ Suggestions :", ["-- Choisir --"] + suggestions, key="sugg_accueil")
+                suggestions = df_recherche['title_fr'].tolist()[:20]
+                choix = st.selectbox("🎬 Suggestions :", ["-- Choisir --"] + suggestions, key="sugg_accueil")
                 if choix != "-- Choisir --":
                     film_choisi = df[df['title_fr'] == choix].iloc[0]
                     st.session_state['film_selectionne'] = film_choisi.to_dict()
                     st.rerun()
-            st.markdown(f"<p style='color:#9a8c98;'>{len(df_recherche)} films trouv├®s</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:#c9a84c;'>{len(df_recherche)} films trouvés</p>", unsafe_allow_html=True)
             afficher_grille(df_recherche.head(20), "accueil_recherche")
         elif recherche_accueil:
-            st.markdown("<p style='color:#9a8c98;'>Tape au moins 2 lettres...</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#c9a84c;'>Tape au moins 2 lettres...</p>", unsafe_allow_html=True)
         else:
-            if genre_accueil == 'Tous':
-                afficher_bandeau("Ô¡É Les mieux not├®s", df.sort_values('imdb_rating', ascending=False), "notes")
-                afficher_bandeau("­ƒöÑ Les plus populaires", df.sort_values('tmdb_popularity', ascending=False), "pop")
-                afficher_bandeau("­ƒåò Les plus r├®cents", df.sort_values('year', ascending=False), "recents")
+           if genre_accueil == 'Tous':
+                afficher_bandeau("⭐ Les mieux notés", df.sort_values('imdb_rating', ascending=False), "notes")
+                st.divider()
+                afficher_bandeau("🔥 Les plus populaires", df.sort_values('tmdb_popularity', ascending=False), "pop")
+                st.divider()
+                afficher_bandeau("🆕 Les plus récents", df.sort_values('year', ascending=False), "recents")
+                st.divider()
                 
-                top_genres = df['genres_imdb'].dropna().str.split(',').explode().str.strip().value_counts().head(6).index.tolist()
+                genre_emojis = {
+                    "Drama": "🎭",
+                    "Comedie": "😂",
+                    "Action": "💥",
+                    "Romance": "❤️",
+                    "Thriller": "😱",
+                    "Horror": "👻",
+                    "Aventure": "🗺️",
+                    "Crime": "🔍",
+                    "Biographie": "📖",
+                    "Animation": "✨",
+                    "Fantastique": "🧙",
+                    "Science-Fiction": "🚀",
+                    "Histoire": "🏛️",
+                    "Music": "🎵",
+                    "Sport": "🏆",
+                    "Guerre": "⚔️",
+                    "Famille": "👨‍👩‍👧",
+                    "Documentaire": "🎥",
+                    "Mystere": "🕵️",
+                    "Western": "🤠",
+                }
+                top_genres = [g for g in df['genres_imdb'].dropna().str.split(',').explode().str.strip().value_counts().head(6).index.tolist() if g not in ["Tous", "", "tous", "TOUS"]]
                 for genre in top_genres:
                     films_genre = df[df['genres_imdb'].str.contains(genre, case=False, na=False)].sort_values('imdb_rating', ascending=False)
-                    afficher_bandeau(f"­ƒÄ¼ {genre}", films_genre, f"genre_{genre}")
-            else:
+                    emoji = genre_emojis.get(genre, "🎬")
+                    afficher_bandeau(f"{emoji} {TRAD_GENRES.get(genre, genre)}", films_genre, f"genre_{genre}")
+                    st.divider()
+                    
+           else:
                 films_genre = df[df['genres_imdb'].str.contains(genre_accueil, case=False, na=False)].sort_values('imdb_rating', ascending=False)
-                afficher_bandeau(f"­ƒÄ¼ {genre_accueil}", films_genre, f"genre_filtre")
+                afficher_bandeau(f"🎬 {genre_accueil}", films_genre, f"genre_filtre")
 
 # ===== PAGE RECHERCHE =====
-elif page == "­ƒöì Recherche & Filtres":
+elif page == "🔍 Recherche & Filtres":
 
     if st.session_state.get('show_login') and not st.session_state['admin_connecte']:
         username = st.text_input("Nom d'utilisateur")
@@ -777,7 +1064,7 @@ elif page == "­ƒöì Recherche & Filtres":
 
         col1, col2 = st.columns(2)
         with col1:
-            recherche = st.text_input("­ƒöì Rechercher un film", placeholder="Ex: Inception...")
+            recherche = st.text_input("🔍 Rechercher un film", placeholder="Ex: Inception...")
             if recherche and len(recherche) >= 2:
                 suggestions_df = df[
                     df['title_fr'].str.lower().str.startswith(recherche.lower()) |
@@ -785,7 +1072,7 @@ elif page == "­ƒöì Recherche & Filtres":
                 ]
                 if len(suggestions_df) > 0:
                     suggestions = suggestions_df['title_fr'].tolist()[:8]
-                    choix = st.selectbox("­ƒÄ¼ Suggestions :", ["-- Choisir --"] + suggestions, key="sugg_recherche")
+                    choix = st.selectbox("🎬 Suggestions :", ["-- Choisir --"] + suggestions, key="sugg_recherche")
                     if choix != "-- Choisir --":
                         film_choisi = df[df['title_fr'] == choix].iloc[0]
                         st.session_state['film_selectionne'] = film_choisi.to_dict()
@@ -793,7 +1080,7 @@ elif page == "­ƒöì Recherche & Filtres":
         with col2:
             tous_genres = df['genres_imdb'].dropna().str.split(',').explode().str.strip().unique()
             genres_uniques = ['Tous'] + sorted(tous_genres.tolist())
-            genre_choisi = st.selectbox("­ƒÄ¡ Filtrer par genre", genres_uniques)
+            genre_choisi = st.selectbox("🎭 Filtrer par genre", genres_uniques)
 
         st.markdown('<div class="barre-deco"></div>', unsafe_allow_html=True)
 
@@ -801,13 +1088,13 @@ elif page == "­ƒöì Recherche & Filtres":
         df_filtre = df_filtre.sort_values('imdb_rating', ascending=False)
         if recherche:
             df_filtre = df_filtre[
-                df_filtre['title_fr'].str.contains(recherche, case=False, na=False) |
-                df_filtre['original_title_imdb'].str.contains(recherche, case=False, na=False)
+                df_filtre['title_fr'].str.lower().str.startswith(recherche.lower()) |
+                df_filtre['original_title_imdb'].str.lower().str.startswith(recherche.lower())
             ]
         if genre_choisi != 'Tous':
             df_filtre = df_filtre[df_filtre['genres_imdb'].str.contains(genre_choisi, case=False, na=False)]
 
-        st.markdown(f"<p style='color:#9a8c98;'>{len(df_filtre)} films trouv├®s</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:#c9a84c;'>{len(df_filtre)} films trouvés</p>", unsafe_allow_html=True)
 
         films_par_page = 20
         total_pages = max(1, (len(df_filtre) - 1) // films_par_page + 1)
@@ -827,21 +1114,21 @@ elif page == "­ƒöì Recherche & Filtres":
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             if page_actuelle > 1:
-                if st.button("ÔåÉ Pr├®c├®dent"):
+                if st.button("← Précédent"):
                     st.session_state['page_recherche'] -= 1
                     st.rerun()
         with col2:
-            st.markdown(f"<p style='text-align:center; color:#9a8c98;'>Page {page_actuelle} / {total_pages}</p>", unsafe_allow_html=True)
+            st.markdown(f"<p style='text-align:center; color:#c9a84c;'>Page {page_actuelle} / {total_pages}</p>", unsafe_allow_html=True)
         with col3:
             if page_actuelle < total_pages:
-                if st.button("Suivant ÔåÆ"):
+                if st.button("Suivant →"):
                     st.session_state['page_recherche'] += 1
                     st.rerun()
 
 # ===== PAGE ADMIN =====
-elif page == "­ƒöÉ Admin":
+elif page == "🔐 Admin":
     if st.session_state['admin_connecte']:
         afficher_admin()
     else:
-        st.error("Acc├¿s non autoris├® !")
+        st.error("Accès non autorisé !")
         st.rerun()
