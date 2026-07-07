@@ -1,7 +1,8 @@
 streamlit
 pandas
-requests
-plotly
-openpyxl
+numpy
 scikit-learn
 scipy
+plotly
+requests
+deep-translator
